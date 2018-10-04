@@ -27,6 +27,13 @@ createCode <- function(code, lyr, msk, out, nme){
   shell(code)# system2(paste0('python ', code));# shell.exec(code)
   print('Done...')
 }
+noMatch <- function(pos){
+  # pos <- 1
+  x <- grep(yrs[pos], fls, value = TRUE) %>% str_sub(., 11, nchar(.)) %>% gsub('.tif', '', .)  
+  y <- setdiff(dptos, x)
+  print('Done!')
+  return(y)
+}
 
 # Paths
 fles <- list.files('../_data/_tif/_frst/_geo/_col', full.names = TRUE, pattern = '.tif$')
@@ -53,8 +60,7 @@ lapply(1:length(dptos), function(k){
 
 # Years
 yrs <- parse_number(nmes)
-nmes <- c('frst_2000.tif', 'frst_2016.tif', 'frst_2017')
-yrs <- c(2000, 2005, 2015)
+nmes <- basename(fles)
 shps <- list.files('//dapadfs/Workspace_cluster_9/Coffee_Cocoa2/_cocoaCol/_data/_shp/_base/_dptos', full.names = TRUE, pattern = '.shp$')
 out <- '//dapadfs/Workspace_cluster_9/Coffee_Cocoa2/_cocoaCol/_data/_tif/_frst/_geo/_dptos'
 
@@ -75,12 +81,30 @@ lapply(1:length(yrs), function(y){
   print('Done..!')
 })
 
+# Reviewing the results
+fls <- list.files('../_data/_tif/_frst/_geo/_dptos/', recursive = TRUE, pattern = '.tif$')
+fls <- basename(fls)
+parse_number(fls) %>% unique() # Years Ok...!
 
-createCode(code = code,
-           lyr = '//dapadfs/Workspace_cluster_9/Coffee_Cocoa2/_cocoaCol/_data/Reporte_Bosque_Natural/2005/Productos_TIFF/TS666TGG9_BEA_geo.tif',
-           msk = '//dapadfs/Workspace_cluster_9/Coffee_Cocoa2/_cocoaCol/_data/_shp/_base/valle.shp',
-           out = '//dapadfs/Workspace_cluster_9/Coffee_Cocoa2/_cocoaCol/_tmp',
-           nme = 'frst_2005_vlle.tif')
+miss <- lapply(1:length(yrs), noMatch) %>% unique() %>% unlist()
+miss <- iconv(miss, to = 'ASCII//TRANSLIT')
+
+# Missing raster (this happened through the accented characters)
+shps2 <- list.files('//dapadfs/Workspace_cluster_9/Coffee_Cocoa2/_cocoaCol/_data/_shp/_base/_dptos', full.names = TRUE, pattern = '.shp$')
+shps2 <- grep(paste0(miss, collapse = '|'), shps2, value = TRUE)
+dptos2 <- basename(shps2) %>% gsub('lim_', '', .) %>% gsub('.shp', '', .)
+
+lapply(1:length(yrs), function(y){
+  print(yrs[y])
+  lapply(1:length(dptos2), function(k){
+    print(dptos2[k])
+    createCode(code = code,
+               lyr = lyrs[y],
+               msk = shps2[k],
+               out = paste(out, yrs[y], sep = '/'),
+               nme = paste0(gsub('.tif', '', nmes[y]), '_', dptos2[k], '.tif'))
+  }) 
+  print('Done..!')
+})
 
 
-# End
